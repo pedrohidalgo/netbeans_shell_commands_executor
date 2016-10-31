@@ -7,12 +7,12 @@ import static com.qualixium.executor.command.CommandsConfigurationDialog.COLUMN_
 import static com.qualixium.executor.command.CommandsConfigurationDialog.COLUMN_NAME;
 import static com.qualixium.executor.command.CommandsConfigurationDialog.CUSTOM_COMMANDS;
 import static com.qualixium.executor.command.CommandsConfigurationDialog.MAPPER;
+import com.qualixium.executor.util.BoundsPopupMenuListener;
 import java.io.IOException;
 import javax.swing.DefaultComboBoxModel;
 import org.netbeans.api.extexecution.ExecutionDescriptor;
 import org.netbeans.api.extexecution.ExecutionService;
 import org.netbeans.api.extexecution.ExternalProcessBuilder;
-import org.netbeans.commands.util.BoundsPopupMenuListener;
 import org.openide.LifecycleManager;
 import org.openide.util.Exceptions;
 import org.openide.util.NbPreferences;

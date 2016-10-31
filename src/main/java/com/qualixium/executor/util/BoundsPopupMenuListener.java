@@ -1,4 +1,4 @@
-package org.netbeans.commands.util;
+package com.qualixium.executor.util;
 
 import java.awt.*;
 import javax.swing.*;
