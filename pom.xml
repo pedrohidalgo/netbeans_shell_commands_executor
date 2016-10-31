@@ -3,11 +3,19 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.qualixium</groupId>
     <artifactId>executor</artifactId>
-    <version>1.0</version>
+    <version>1.0.2</version>
     <packaging>nbm</packaging>
         <description>
         <![CDATA[
 Execute custom Shell commands whenever you need using a combobox on the Netbeans Toolbar.
+
+Some simple commands ideas you might want to use:
+<ol>
+    <li>Open urls on the browser</li>
+    <li>upload a file to an FTP Server</li>
+    <li>Run your personal shell script file</li>
+    <li>etc.</li>
+</ol>
 ]]>
     </description>
     <build>
@@ -38,9 +46,22 @@ Execute custom Shell commands whenever you need using a combobox on the Netbeans
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>2.4</version>
+                <executions>
+                    <execution>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
                 <configuration>
                     <useDefaultManifestFile>true</useDefaultManifestFile>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.15</version>
             </plugin>
         </plugins>
     </build>
@@ -87,6 +108,18 @@ Execute custom Shell commands whenever you need using a combobox on the Netbeans
             <artifactId>org-netbeans-modules-extexecution</artifactId>
             <version>RELEASE82</version>
             <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-core</artifactId>
+            <version>1.3</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
     <properties>
