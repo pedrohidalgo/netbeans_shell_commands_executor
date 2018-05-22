@@ -24,6 +24,7 @@ import static com.qualixium.executor.command.CommandsConfigurationDialog.CUSTOM_
 import static com.qualixium.executor.command.CommandsConfigurationDialog.MAPPER;
 import static com.qualixium.executor.command.CommandsConfigurationDialog.PATH_VALUE;
 import com.qualixium.executor.util.BoundsPopupMenuListener;
+import java.io.File;
 import java.io.IOException;
 import javax.swing.DefaultComboBoxModel;
 import org.netbeans.api.extexecution.ExecutionDescriptor;
@@ -102,11 +103,13 @@ public class ToolbarPanel extends javax.swing.JPanel {
     private void cbxCommandsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbxCommandsActionPerformed
       try {
         Command command = (Command) cbxCommands.getSelectedItem();
+        
+        String projectDirectory = NetBeansContextInfo.getProjectDirectory();
 
         String finalCommand = command.command
                 .replace("$CURRENT_FILE$", NetBeansContextInfo.getFullFilePath())
                 .replace("$CURRENT_PROJECT_NAME$", NetBeansContextInfo.getProjectName())
-                .replace("$CURRENT_PROJECT_DIR$", NetBeansContextInfo.getProjectDirectory());
+                .replace("$CURRENT_PROJECT_DIR$", projectDirectory);
 
         String pathValue = NbPreferences.forModule(CommandsConfigurationDialog.class)
                 .get(PATH_VALUE, "");
@@ -115,6 +118,10 @@ public class ToolbarPanel extends javax.swing.JPanel {
         //TODO ExternalProcessBuilder is deprecated. Remove it
         ExternalProcessBuilder processBuilder = new ExternalProcessBuilder(commandStringArray[0])
                 .addEnvironmentVariable("PATH", pathValue);
+        
+        if(!projectDirectory.isEmpty()){
+          processBuilder = processBuilder.workingDirectory(new File(projectDirectory));
+        }
 
         if (commandStringArray.length > 1) {
           for (String commandString : commandStringArray) {
