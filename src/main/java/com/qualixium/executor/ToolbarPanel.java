@@ -33,6 +33,8 @@ import org.netbeans.api.extexecution.ExternalProcessBuilder;
 import org.openide.LifecycleManager;
 import org.openide.util.Exceptions;
 import org.openide.util.NbPreferences;
+import org.openide.windows.IOProvider;
+import org.openide.windows.InputOutput;
 
 /**
  *
@@ -101,15 +103,17 @@ public class ToolbarPanel extends javax.swing.JPanel {
     }//GEN-LAST:event_btnCommandConfigActionPerformed
 
     private void cbxCommandsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbxCommandsActionPerformed
+      InputOutput io = null;
       try {
         Command command = (Command) cbxCommands.getSelectedItem();
-        
+
         String projectDirectory = NetBeansContextInfo.getProjectDirectory();
 
         String finalCommand = command.command
                 .replace("$CURRENT_FILE$", NetBeansContextInfo.getFullFilePath())
                 .replace("$CURRENT_PROJECT_NAME$", NetBeansContextInfo.getProjectName())
                 .replace("$CURRENT_PROJECT_DIR$", projectDirectory);
+        System.out.println("[" + finalCommand + "] = finalCommand");
 
         String pathValue = NbPreferences.forModule(CommandsConfigurationDialog.class)
                 .get(PATH_VALUE, "");
@@ -118,8 +122,8 @@ public class ToolbarPanel extends javax.swing.JPanel {
         //TODO ExternalProcessBuilder is deprecated. Remove it
         ExternalProcessBuilder processBuilder = new ExternalProcessBuilder(commandStringArray[0])
                 .addEnvironmentVariable("PATH", pathValue);
-        
-        if(!projectDirectory.isEmpty()){
+
+        if (!projectDirectory.isEmpty()) {
           processBuilder = processBuilder.workingDirectory(new File(projectDirectory));
         }
 
@@ -128,22 +132,31 @@ public class ToolbarPanel extends javax.swing.JPanel {
             if (!commandString.equals(commandStringArray[0])) {
               processBuilder = processBuilder.addArgument(commandString);
             }
-
           }
         }
+
+        io = IOProvider.getDefault().getIO(command.name, false);
+        io.setInputVisible(true);
 
         ExecutionDescriptor descriptor = new ExecutionDescriptor()
                 .frontWindow(true)
                 .showProgress(true)
                 .inputVisible(true)
                 .controllable(true)
+                .inputOutput(io)
                 .preExecution(() -> LifecycleManager.getDefault().saveAll());
 
         ExecutionService service = ExecutionService.newService(
                 processBuilder, descriptor, command.name);
-
+        
         service.run();
+        io.getOut().println("------------------------------------------------");
+        io.getOut().printf((char)27 + "[34m" + "Command: "+finalCommand);
+        io.getOut().println();
+        io.getOut().println("------------------------------------------------");
+        io.getOut().close();
       } catch (Exception ex) {
+        io.getErr().println(ex.getMessage());
         Exceptions.printStackTrace(ex);
       }
     }//GEN-LAST:event_cbxCommandsActionPerformed
