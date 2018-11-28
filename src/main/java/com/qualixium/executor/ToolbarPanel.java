@@ -154,7 +154,7 @@ public class ToolbarPanel extends javax.swing.JPanel {
               .replace("$CURRENT_FILE$", NetBeansContextInfo.getFullFilePath())
               .replace("$CURRENT_PROJECT_NAME$", NetBeansContextInfo.getProjectName())
               .replace("$CURRENT_PROJECT_DIR$", projectDirectory);
-      System.out.println("[" + finalCommand + "] = finalCommand");
+//      System.out.println("[" + finalCommand + "] = finalCommand");
 
       String pathValue = NbPreferences.forModule(CommandsConfigurationDialog.class)
               .get(PATH_VALUE, "");

@@ -44,7 +44,6 @@ public final class CustomCommandAction extends AbstractAction implements Present
   @Override
   public void actionPerformed(ActionEvent e) {
     //delegated to toolbar
-    System.out.println("HERE ON ACTION PERFORMED!!!!");
     ToolbarPanel.executeLatestCommand();
   }
 
