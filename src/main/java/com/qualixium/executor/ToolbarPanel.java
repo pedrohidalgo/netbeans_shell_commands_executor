@@ -26,6 +26,7 @@ import static com.qualixium.executor.command.CommandsConfigurationDialog.PATH_VA
 import com.qualixium.executor.util.BoundsPopupMenuListener;
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.Future;
 import javax.swing.DefaultComboBoxModel;
 import org.netbeans.api.extexecution.ExecutionDescriptor;
 import org.netbeans.api.extexecution.ExecutionService;
@@ -41,6 +42,8 @@ import org.openide.windows.InputOutput;
  * @author pedro
  */
 public class ToolbarPanel extends javax.swing.JPanel {
+
+  public static Command latestCommand;
 
   public ToolbarPanel() {
     initComponents();
@@ -103,62 +106,8 @@ public class ToolbarPanel extends javax.swing.JPanel {
     }//GEN-LAST:event_btnCommandConfigActionPerformed
 
     private void cbxCommandsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbxCommandsActionPerformed
-      InputOutput io = null;
-      try {
-        Command command = (Command) cbxCommands.getSelectedItem();
-
-        String projectDirectory = NetBeansContextInfo.getProjectDirectory();
-
-        String finalCommand = command.command
-                .replace("$CURRENT_FILE$", NetBeansContextInfo.getFullFilePath())
-                .replace("$CURRENT_PROJECT_NAME$", NetBeansContextInfo.getProjectName())
-                .replace("$CURRENT_PROJECT_DIR$", projectDirectory);
-        System.out.println("[" + finalCommand + "] = finalCommand");
-
-        String pathValue = NbPreferences.forModule(CommandsConfigurationDialog.class)
-                .get(PATH_VALUE, "");
-
-        String[] commandStringArray = finalCommand.split(" ");
-        //TODO ExternalProcessBuilder is deprecated. Remove it
-        ExternalProcessBuilder processBuilder = new ExternalProcessBuilder(commandStringArray[0])
-                .addEnvironmentVariable("PATH", pathValue);
-
-        if (!projectDirectory.isEmpty()) {
-          processBuilder = processBuilder.workingDirectory(new File(projectDirectory));
-        }
-
-        if (commandStringArray.length > 1) {
-          for (String commandString : commandStringArray) {
-            if (!commandString.equals(commandStringArray[0])) {
-              processBuilder = processBuilder.addArgument(commandString);
-            }
-          }
-        }
-
-        io = IOProvider.getDefault().getIO(command.name, false);
-        io.setInputVisible(true);
-
-        ExecutionDescriptor descriptor = new ExecutionDescriptor()
-                .frontWindow(true)
-                .showProgress(true)
-                .inputVisible(true)
-                .controllable(true)
-                .inputOutput(io)
-                .preExecution(() -> LifecycleManager.getDefault().saveAll());
-
-        ExecutionService service = ExecutionService.newService(
-                processBuilder, descriptor, command.name);
-        
-        service.run();
-        io.getOut().println("------------------------------------------------");
-        io.getOut().printf((char)27 + "[34m" + "Command: "+finalCommand);
-        io.getOut().println();
-        io.getOut().println("------------------------------------------------");
-        io.getOut().close();
-      } catch (Exception ex) {
-        io.getErr().println(ex.getMessage());
-        Exceptions.printStackTrace(ex);
-      }
+      Command command = (Command) cbxCommands.getSelectedItem();
+      executeCommand(command);
     }//GEN-LAST:event_cbxCommandsActionPerformed
 
 
@@ -192,5 +141,78 @@ public class ToolbarPanel extends javax.swing.JPanel {
     cbxCommands.setModel(modelCommands);
     cbxCommands.addPopupMenuListener(popupMenuListener);
     cbxCommands.setPrototypeDisplayValue("scrot -cd 5 /home/pedro/Desktop/file1.png");
+  }
+
+  private static void executeCommand(Command command) {
+    InputOutput io = null;
+    try {
+      latestCommand = command;
+
+      String projectDirectory = NetBeansContextInfo.getProjectDirectory();
+
+      String finalCommand = command.command
+              .replace("$CURRENT_FILE$", NetBeansContextInfo.getFullFilePath())
+              .replace("$CURRENT_PROJECT_NAME$", NetBeansContextInfo.getProjectName())
+              .replace("$CURRENT_PROJECT_DIR$", projectDirectory);
+      System.out.println("[" + finalCommand + "] = finalCommand");
+
+      String pathValue = NbPreferences.forModule(CommandsConfigurationDialog.class)
+              .get(PATH_VALUE, "");
+
+      String[] commandStringArray = finalCommand.split(" ");
+      //TODO ExternalProcessBuilder is deprecated. Remove it
+      ExternalProcessBuilder processBuilder = new ExternalProcessBuilder(commandStringArray[0])
+              .addEnvironmentVariable("PATH", pathValue);
+
+      if (!projectDirectory.isEmpty()) {
+        processBuilder = processBuilder.workingDirectory(new File(projectDirectory));
+      }
+
+      if (commandStringArray.length > 1) {
+        for (String commandString : commandStringArray) {
+          if (!commandString.equals(commandStringArray[0])) {
+            processBuilder = processBuilder.addArgument(commandString);
+          }
+        }
+      }
+
+      io = IOProvider.getDefault().getIO(command.name, false);
+      io.setInputVisible(true);
+
+      ExecutionDescriptor descriptor = new ExecutionDescriptor()
+              .frontWindow(true)
+              .showProgress(true)
+              .inputVisible(true)
+              .controllable(true)
+              .inputOutput(io)
+              .preExecution(() -> LifecycleManager.getDefault().saveAll());
+
+      ExecutionService service = ExecutionService.newService(
+              processBuilder, descriptor, command.name);
+
+      
+      Future<Integer> futureResult = service.run();
+      io.getOut().println("------------------------------------------------");
+      io.getOut().printf((char) 27 + "[34m" + "Command: " + finalCommand);
+      io.getOut().println();
+      io.getOut().println("------------------------------------------------");
+      
+      futureResult.get();
+      io.getOut().println("------------------------------------------------");
+      io.getOut().printf((char) 27 + "[32m" + "Done.");
+      io.getOut().println();
+      io.getOut().println("------------------------------------------------");
+      io.getOut().close();
+      
+    } catch (Exception ex) {
+      io.getErr().println(ex.getMessage());
+      Exceptions.printStackTrace(ex);
+    }
+  }
+  
+  public static void executeLatestCommand(){
+    if(latestCommand != null){
+      executeCommand(latestCommand);
+    }
   }
 }

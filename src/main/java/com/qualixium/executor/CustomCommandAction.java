@@ -20,6 +20,7 @@ import java.awt.event.ActionEvent;
 import javax.swing.AbstractAction;
 import org.openide.awt.ActionID;
 import org.openide.awt.ActionReference;
+import org.openide.awt.ActionReferences;
 import org.openide.awt.ActionRegistration;
 import org.openide.util.NbBundle.Messages;
 import org.openide.util.actions.Presenter;
@@ -32,17 +33,23 @@ import org.openide.util.actions.Presenter;
         lazy = false,
         displayName = "#CTL_CustomCommandAction"
 )
-@ActionReference(path = "Toolbars/Commands", position = 0)
+@ActionReferences({
+  @ActionReference(path = "Toolbars/Commands", position = 0)
+  ,
+  @ActionReference(path = "Shortcuts", name = "SM-E")
+})
 @Messages("CTL_CustomCommandAction=CustomCommand")
 public final class CustomCommandAction extends AbstractAction implements Presenter.Toolbar {
 
-    @Override
-    public void actionPerformed(ActionEvent e) {
-        //delegated to toolbar
-    }
+  @Override
+  public void actionPerformed(ActionEvent e) {
+    //delegated to toolbar
+    System.out.println("HERE ON ACTION PERFORMED!!!!");
+    ToolbarPanel.executeLatestCommand();
+  }
 
-    @Override
-    public Component getToolbarPresenter() {
-        return new ToolbarPanel();
-    }
+  @Override
+  public Component getToolbarPresenter() {
+    return new ToolbarPanel();
+  }
 }
