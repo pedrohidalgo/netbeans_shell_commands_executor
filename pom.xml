@@ -3,11 +3,12 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.qualixium</groupId>
     <artifactId>executor</artifactId>
-    <version>1.2.1.1</version>
+    <version>1.3</version>
     <packaging>nbm</packaging>
         <description>
         <![CDATA[
 Execute custom Shell commands whenever you need using a combobox on the Netbeans Toolbar.
+The latest command will be executed when pressed Cmd+Shift+E (No other action can use this same shortcut in order for this to work)
 
 Some simple commands ideas you might want to use:
 <ol>
