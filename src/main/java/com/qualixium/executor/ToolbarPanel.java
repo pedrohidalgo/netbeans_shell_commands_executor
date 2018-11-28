@@ -193,7 +193,7 @@ public class ToolbarPanel extends javax.swing.JPanel {
       
       Future<Integer> futureResult = service.run();
       io.getOut().println("------------------------------------------------");
-      io.getOut().printf((char) 27 + "[34m" + "Command: " + finalCommand);
+      io.getOut().printf((char) 27 + "[32m" + "Command: " + finalCommand);
       io.getOut().println();
       io.getOut().println("------------------------------------------------");
       
