@@ -26,8 +26,12 @@ import static com.qualixium.executor.command.CommandsConfigurationDialog.PATH_VA
 import com.qualixium.executor.util.BoundsPopupMenuListener;
 import java.io.File;
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.Future;
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 import org.netbeans.api.extexecution.ExecutionDescriptor;
 import org.netbeans.api.extexecution.ExecutionService;
 import org.netbeans.api.extexecution.ExternalProcessBuilder;
@@ -91,7 +95,7 @@ public class ToolbarPanel extends javax.swing.JPanel {
             .addGroup(layout.createSequentialGroup()
                 .addComponent(btnCommandConfig, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(cbxCommands, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addComponent(cbxCommands, 0, 192, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -107,6 +111,7 @@ public class ToolbarPanel extends javax.swing.JPanel {
 
     private void cbxCommandsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbxCommandsActionPerformed
       Command command = (Command) cbxCommands.getSelectedItem();
+      cbxCommands.setSelectedIndex(-1);
       executeCommand(command);
     }//GEN-LAST:event_cbxCommandsActionPerformed
 
@@ -117,8 +122,34 @@ public class ToolbarPanel extends javax.swing.JPanel {
     // End of variables declaration//GEN-END:variables
     BoundsPopupMenuListener popupMenuListener = new BoundsPopupMenuListener(true, true, 500, false);
 
+    private List<Command> getProjectSpecificCommands(String projectDirectory) {
+        List<Command> result = new LinkedList<>();
+        File dir = new File(new File(projectDirectory, "nbproject"), "executor");
+        if (dir.exists() && dir.isDirectory()) {
+            for (File f:dir.listFiles()) {
+                result.add(new Command(f.getName(), f.getAbsolutePath()));
+            }
+        }
+        return result;
+    }
+    
   private void myOwnInitComponents() {
     initializeCbxCommands();
+    cbxCommands.addPopupMenuListener(new PopupMenuListener(){
+        @Override
+        public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
+            //re-init menu on open in order to account for the active
+            //project
+            initializeCbxCommands();
+        }
+
+        @Override
+        public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {}
+
+        @Override
+        public void popupMenuCanceled(PopupMenuEvent e) {}
+    
+    });
   }
 
   public void initializeCbxCommands() {
@@ -138,76 +169,80 @@ public class ToolbarPanel extends javax.swing.JPanel {
         Exceptions.printStackTrace(ex);
       }
     }
+    modelCommands.addAll(getProjectSpecificCommands(NetBeansContextInfo.getProjectDirectory()));
+    
     cbxCommands.setModel(modelCommands);
     cbxCommands.addPopupMenuListener(popupMenuListener);
     cbxCommands.setPrototypeDisplayValue("scrot -cd 5 /home/pedro/Desktop/file1.png");
   }
 
   private static void executeCommand(Command command) {
-    InputOutput io = null;
-    try {
-      latestCommand = command;
+    new Thread(() -> {
+        InputOutput io = null;
+        try {
+          latestCommand = command;
 
-      String projectDirectory = NetBeansContextInfo.getProjectDirectory();
+          String projectDirectory = NetBeansContextInfo.getProjectDirectory();
 
-      String finalCommand = command.command
-              .replace("$CURRENT_FILE$", NetBeansContextInfo.getFullFilePath())
-              .replace("$CURRENT_PROJECT_NAME$", NetBeansContextInfo.getProjectName())
-              .replace("$CURRENT_PROJECT_DIR$", projectDirectory);
-//      System.out.println("[" + finalCommand + "] = finalCommand");
+          String finalCommand = command.command
+                  .replace("$CURRENT_FILE$", NetBeansContextInfo.getFullFilePath())
+                  .replace("$CURRENT_PROJECT_NAME$", NetBeansContextInfo.getProjectName())
+                  .replace("$CURRENT_PROJECT_DIR$", projectDirectory);
+    //      System.out.println("[" + finalCommand + "] = finalCommand");
 
-      String pathValue = NbPreferences.forModule(CommandsConfigurationDialog.class)
-              .get(PATH_VALUE, "");
+          String pathValue = NbPreferences.forModule(CommandsConfigurationDialog.class)
+                  .get(PATH_VALUE, "");
 
-      String[] commandStringArray = finalCommand.split(" ");
-      //TODO ExternalProcessBuilder is deprecated. Remove it
-      ExternalProcessBuilder processBuilder = new ExternalProcessBuilder(commandStringArray[0])
-              .addEnvironmentVariable("PATH", pathValue);
+          String[] commandStringArray = finalCommand.split(" ");
+          //TODO ExternalProcessBuilder is deprecated. Remove it
+          ExternalProcessBuilder processBuilder = new ExternalProcessBuilder(commandStringArray[0])
+                  .addEnvironmentVariable("PATH", pathValue);
 
-      if (!projectDirectory.isEmpty()) {
-        processBuilder = processBuilder.workingDirectory(new File(projectDirectory));
-      }
-
-      if (commandStringArray.length > 1) {
-        for (String commandString : commandStringArray) {
-          if (!commandString.equals(commandStringArray[0])) {
-            processBuilder = processBuilder.addArgument(commandString);
+          if (!projectDirectory.isEmpty()) {
+            processBuilder = processBuilder.workingDirectory(new File(projectDirectory));
           }
+
+          if (commandStringArray.length > 1) {
+            for (String commandString : commandStringArray) {
+              if (!commandString.equals(commandStringArray[0])) {
+                processBuilder = processBuilder.addArgument(commandString);
+              }
+            }
+          }
+
+          io = IOProvider.getDefault().getIO(command.name, false);
+          io.setInputVisible(true);
+
+          ExecutionDescriptor descriptor = new ExecutionDescriptor()
+                  .frontWindow(true)
+                  .showProgress(true)
+                  .inputVisible(true)
+                  .controllable(true)
+                  .inputOutput(io)
+                  .preExecution(() -> LifecycleManager.getDefault().saveAll());
+
+          ExecutionService service = ExecutionService.newService(
+                  processBuilder, descriptor, command.name);
+
+
+          Future<Integer> futureResult = service.run();
+          io.getOut().println("------------------------------------------------");
+          io.getOut().printf((char) 27 + "[32m" + "Command: " + finalCommand);
+          io.getOut().println();
+          io.getOut().println("------------------------------------------------");
+
+          futureResult.get();
+          io.getOut().println("------------------------------------------------");
+          io.getOut().printf((char) 27 + "[32m" + "Done.");
+          io.getOut().println();
+          io.getOut().println("------------------------------------------------");
+          io.getOut().close();
+
+        } catch (Exception ex) {
+          io.getErr().println(ex.getMessage());
+          Exceptions.printStackTrace(ex);
         }
-      }
-
-      io = IOProvider.getDefault().getIO(command.name, false);
-      io.setInputVisible(true);
-
-      ExecutionDescriptor descriptor = new ExecutionDescriptor()
-              .frontWindow(true)
-              .showProgress(true)
-              .inputVisible(true)
-              .controllable(true)
-              .inputOutput(io)
-              .preExecution(() -> LifecycleManager.getDefault().saveAll());
-
-      ExecutionService service = ExecutionService.newService(
-              processBuilder, descriptor, command.name);
-
-      
-      Future<Integer> futureResult = service.run();
-      io.getOut().println("------------------------------------------------");
-      io.getOut().printf((char) 27 + "[32m" + "Command: " + finalCommand);
-      io.getOut().println();
-      io.getOut().println("------------------------------------------------");
-      
-      futureResult.get();
-      io.getOut().println("------------------------------------------------");
-      io.getOut().printf((char) 27 + "[32m" + "Done.");
-      io.getOut().println();
-      io.getOut().println("------------------------------------------------");
-      io.getOut().close();
-      
-    } catch (Exception ex) {
-      io.getErr().println(ex.getMessage());
-      Exceptions.printStackTrace(ex);
-    }
+    }).start();
   }
   
   public static void executeLatestCommand(){
